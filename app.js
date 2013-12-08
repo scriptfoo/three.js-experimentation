@@ -11,8 +11,9 @@
 	addSword();
 
 	addPointLight();
+	addAmbientLight();
 
-	window.setTimeout(animate, 2000);
+	animate();
 
 	function init () {
 		var manager;
@@ -23,6 +24,7 @@
 
 		camera.position.z = 1000;
 		renderer.setSize(window.innerWidth, window.innerHeight);
+		renderer.setClearColor(0xaaaaaa, 1);
 
 		document.body.appendChild(renderer.domElement);
 
@@ -37,7 +39,7 @@
 
 	function addCube () {
 		var geometry = new THREE.CubeGeometry(1,1,1);
-		var material = new THREE.MeshLambertMaterial({ color: 0x00ff00});
+		var material = new THREE.MeshLambertMaterial({ color: 0xffffff});
 
 		objects.cube = new THREE.Mesh(geometry, material);
 
@@ -49,25 +51,61 @@
 	}
 
 	function addSword () {
-		var texture = new THREE.Texture();
+		var diffuseTexture = new THREE.Texture();
+		var specularTexture = new THREE.Texture();
+		var normalTexture = new THREE.Texture();
+		var lightTexture = new THREE.Texture();
 
 		imageLoader.load('textures/skywardSwordDiffuse.png', function (image) {
-			texture.image = image;
-			texture.needsUpdate = true;
+			diffuseTexture.image = image;
+			diffuseTexture.needsUpdate = true;
+		});
+		imageLoader.load('textures/skywardSwordSpecular.png', function (image) {
+			specularTexture.image = image;
+			specularTexture.needsUpdate = true;
+		});
+		imageLoader.load('textures/skywardSwordNormal.png', function (image) {
+			normalTexture.image = image;
+			normalTexture.needsUpdate = true;
+		});
+		imageLoader.load('textures/skywardSwordEmit.png', function (image) {
+			lightTexture.image = image;
+			lightTexture.needsUpdate = true;
 		});
 
 		objLoader.load('3d-models/sword.obj', function (object) {
-			console.log(object);
+			/**
+			 * If we had to duplicate the object to add multiple materials, this
+			 * is how it would be done.
+			 *
+			 * object = THREE.SceneUtils.createMultiMaterialObject(
+			 * 	object.children[0].geometry, [
+			 * 		new THREE.MeshLambertMaterial({
+			 * 			map: texture,
+			 * 			transparent: true
+			 * 		}),
+			 * 		new THREE.MeshPhongMaterial({color: 0xceeeff})
+			 * 	]
+			 * );
+			 */
+
 			object.traverse(function (child) {
 				if (child instanceof THREE.Mesh) {
-					child.material.map = texture;
-					child.material.color = new THREE.Color(0xffffff);
+					child.material = new THREE.MeshPhongMaterial({
+						map: diffuseTexture,
+						specularMap: specularTexture,
+						// lightMap: lightTexture, doesn't seem to work
+						normalMap: normalTexture,
+						transparent: true
+					})
 				}
 			});
 
 			object.position.x = 0;
 			object.position.y = 0;
 			object.position.z = 0;
+
+			object.rotation.y += 10.3;
 
 			object.scale = {
 				x: 0.5,
@@ -81,20 +119,26 @@
 	}
 
 	function addPointLight () {
-		objects.pointLight = new THREE.PointLight(0xFFFFFF);
+		objects.pointLight = new THREE.PointLight(0xaaaaaa);
 
 		objects.pointLight.position.x = 10;
-		objects.pointLight.position.y = 50;
+		objects.pointLight.position.y = -100;
 		objects.pointLight.position.z = 130;
 
 		scene.add(objects.pointLight);
 	}
 
-	function render () {
-		//objects.sword.rotation.x += 0.04;
-		objects.sword.rotation.y += 0.2;
+	function addAmbientLight () {
+		objects.ambientLight = new THREE.AmbientLight(0xaaaaaa);
 
-		camera.lookAt(objects.sword.position);
+		scene.add(objects.ambientLight);
+	}
+
+	function render () {
+		if (objects.sword) {
+			objects.sword.rotation.y += 0.07;
+			camera.lookAt(objects.sword.position);
+		}
 
 		renderer.render(scene, camera);
 	}
